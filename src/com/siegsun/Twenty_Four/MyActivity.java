@@ -3,7 +3,6 @@ package com.siegsun.Twenty_Four;
 import android.app.Activity;
 import android.os.Bundle;
 import android.view.View;
-import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -13,17 +12,67 @@ public class MyActivity extends Activity {
     private String result;
 
     private int poker2num(String text) {
-        if (text.equals("A")) {
-            return 1;
-        } else if (text.equals("J")) {
-            return 11;
-        } else if (text.equals("Q")) {
-            return 12;
-        } else if (text.equals("K")) {
-            return 13;
-        } else {
-            return Integer.parseInt(text);
+        switch (text) {
+            case "A":
+                return 1;
+            case "J":
+                return 11;
+            case "Q":
+                return 12;
+            case "K":
+                return 13;
+            default:
+                return Integer.parseInt(text);
         }
+    }
+
+    /**
+     * Remove an element from a double array, also cut element before starting point
+     * @param numbers original array
+     * @param index element to be removed
+     * @param start starting point
+     * @return a new array
+     */
+    private double[] removeElement(double[] numbers, int index, int start) {
+        double[] left = new double[numbers.length - 1 - start];
+        for (int j = start; j < numbers.length; j++) {
+            if (j < index) {
+                left[j - start] = numbers[j];
+            } else if (j > index) {
+                left[j - start - 1] = numbers[j];
+            }
+        }
+        return left;
+    }
+
+    private boolean tryFourOperations(double[] numbers, double target, double picked, String expression) {
+        // Get 4 possible new targets
+        // 1) newTarget + picked = target
+        double newTarget = target - picked;
+        if (recursiveSolver(numbers, newTarget)) {
+            result = "(" + result + "+" + expression + ")";
+            return true;
+        }
+        // 2) newTarget * picked = target
+        newTarget = target / picked;
+        if (recursiveSolver(numbers, newTarget)) {
+            result = "(" + result + "x" + expression + ")";
+            return true;
+        }
+        // 3) newTarget - picked = target
+        newTarget = target + picked;
+        if (recursiveSolver(numbers, newTarget)) {
+            result = "(" + result + "-" + expression + ")";
+            return true;
+        }
+        // 4) newTarget / picked = target
+        newTarget = target * picked;
+        if (recursiveSolver(numbers, newTarget)) {
+            result = "(" + result + "/" + expression + ")";
+            return true;
+        }
+
+        return false;
     }
 
     private boolean recursiveSolver(double[] numbers, double target) {
@@ -40,44 +89,51 @@ public class MyActivity extends Activity {
         } else {
             for (int i = 0; i < numbers.length; i++) {
                 // Pick a number to start
-                int picked = (int) numbers[i];
+                double picked = numbers[i];
                 // Get a new array of left numbers
-                double[] left = new double[numbers.length - 1];
-                for (int j = 0; j < numbers.length; j++) {
-                    if (j < i) {
-                        left[j] = numbers[j];
-                    } else if (j > i) {
-                        left[j-1] = numbers[j];
-                    }
-                }
-                // Get 4 possible new targets
-                // 1) newTarget + picked = target
-                double newTarget = target - picked;
-                if (recursiveSolver(left, newTarget)) {
-                    result = "(" + result + "+" + picked + ")";
-                    return true;
-                }
-                // 2) newTarget * picked = target
-                newTarget = target / picked;
-                if (recursiveSolver(left, newTarget)) {
-                    result = "(" + result + "x" + picked + ")";
-                    return true;
-                }
-                // 3) newTarget - picked = target
-                newTarget = target + picked;
-                if (recursiveSolver(left, newTarget)) {
-                    result = "(" + result + "-" + picked + ")";
-                    return true;
-                }
-                // 4) newTarget / picked = target
-                newTarget = target * picked;
-                if (recursiveSolver(left, newTarget)) {
-                    result = "(" + result + "/" + picked + ")";
-                    return true;
-                }
+                double[] left = removeElement(numbers, i, 0);
+
+                boolean success = tryFourOperations(left, target, picked, Integer.toString((int)picked));
+                if (success) return true;
             }
             return false;
         }
+    }
+
+    /**
+     * In some cases the solution is like (A + B) * (C - D). The recursive solver can not get there because it always
+     * pick one number. This function pick a pair and use A + B or ABS(A - B) as a starting point.
+     * @param numbers 4 integers between 1 and 13
+     * @param target 24
+     * @return true if a solution is found
+     */
+    private boolean solveStartingWithPair(double[] numbers, double target) {
+        if ((numbers.length != 4)) throw new AssertionError();
+        // Check (A,B), (A,C) and (A,D), which is sufficient
+        for (int i = 1; i < 4; i++) {
+            // Get a new array of 2 numbers left
+            double[] left = removeElement(numbers, i, 1);
+
+            // Start with A + X
+            double picked = numbers[0] + numbers[i];
+            String pair = "(" + (int)numbers[0] + "+" + (int)numbers[i] + ")";
+
+            boolean success = tryFourOperations(left, target, picked, pair);
+            if (success) return true;
+
+            // Start with abs(A - X)
+            picked = numbers[0] - numbers[i];
+            if (picked < 0) {
+                picked = 0 - picked;
+                pair = "(" + (int)numbers[i] + "-" + (int)numbers[0] + ")";
+            } else {
+                pair = "(" + (int)numbers[0] + "-" + (int)numbers[i] + ")";
+            }
+
+            success = tryFourOperations(left, target, picked, pair);
+            if (success) return true;
+        }
+        return false;
     }
 
     public void pickOneCard(View view) {
@@ -95,7 +151,13 @@ public class MyActivity extends Activity {
                     TextView aSlot = (TextView) findViewById((slotIDs[i]));
                     numbers[i] = poker2num(aSlot.getText().toString());
                 }
+                // Resolve
                 boolean success = recursiveSolver(numbers, 24);
+                // Try again starting with a pair if failed
+                if (!success) {
+                    success = solveStartingWithPair(numbers, 24);
+                }
+
                 final TextView resultTextView = (TextView) findViewById(R.id.resultArea);
                 if (success) {
                     resultTextView.setText(result);
