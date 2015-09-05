@@ -45,6 +45,14 @@ public class MyActivity extends Activity {
         return left;
     }
 
+    /**
+     * Try 4 possible operations recursively
+     * @param numbers
+     * @param target
+     * @param picked
+     * @param expression
+     * @return
+     */
     private boolean tryFourOperations(double[] numbers, double target, double picked, String expression) {
         // Get 4 possible new targets
         // 1) newTarget + picked = target
