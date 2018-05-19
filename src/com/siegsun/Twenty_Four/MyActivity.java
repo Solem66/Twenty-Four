@@ -61,23 +61,38 @@ public class MyActivity extends Activity {
             result = "(" + result + "+" + expression + ")";
             return true;
         }
-        // 2) newTarget * picked = target
-        newTarget = target / picked;
-        if (recursiveSolver(numbers, newTarget)) {
-            result = "(" + result + "x" + expression + ")";
-            return true;
-        }
-        // 3) newTarget - picked = target
+        // 2.1) newTarget - picked = target
         newTarget = target + picked;
         if (recursiveSolver(numbers, newTarget)) {
             result = "(" + result + "-" + expression + ")";
             return true;
         }
-        // 4) newTarget / picked = target
-        newTarget = target * picked;
+        // 2.2) picked - newTarget = target
+        newTarget = picked - target;
         if (recursiveSolver(numbers, newTarget)) {
-            result = "(" + result + "/" + expression + ")";
+            result = "(" + expression + "-" + result + ")";
             return true;
+        }
+        // Don't try * or / if picked number is 0
+        if (picked != 0) {
+            // 3) newTarget * picked = target
+            newTarget = target / picked;
+            if (recursiveSolver(numbers, newTarget)) {
+                result = "(" + result + "x" + expression + ")";
+                return true;
+            }
+            // 4.1) newTarget / picked = target
+            newTarget = target * picked;
+            if (recursiveSolver(numbers, newTarget)) {
+                result = "(" + result + "/" + expression + ")";
+                return true;
+            }
+            // 4.2) picked / newTarget = target
+            newTarget = picked / target;
+            if (recursiveSolver(numbers, newTarget)) {
+                result = "(" + expression + "/" + result + ")";
+                return true;
+            }
         }
 
         return false;
@@ -86,7 +101,8 @@ public class MyActivity extends Activity {
     private boolean recursiveSolver(double[] numbers, double target) {
         if (numbers.length == 1) {
             // Only one number left, check against target
-            if (numbers[0] == target) {
+            // We don't need exact match because of floating point arithmetic
+            if (Math.abs(numbers[0] - target) < 0.000001) {
                 // Success!
                 result = Integer.toString((int)target);
                 return true;
